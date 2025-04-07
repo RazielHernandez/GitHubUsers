@@ -10,15 +10,16 @@ import SwiftUI
 struct GitHubUserDetailView: View {
     let username: String
     @StateObject private var viewModel = GitHubViewModel()
-    
-    init(username: String, viewModel: GitHubViewModel = GitHubViewModel()) {
-            self.username = username
-            _viewModel = StateObject(wrappedValue: viewModel)
-        }
+    @State private var isLoading = true
 
     var body: some View {
         VStack {
-            if let user = viewModel.user {
+            if isLoading {
+                Spacer()
+                ProgressView("Loading user...")
+                    .progressViewStyle(CircularProgressViewStyle())
+                Spacer()
+            } else if let user = viewModel.user {
                 VStack(spacing: 12) {
                     AsyncImage(url: URL(string: user.avatar_url)) { image in
                         image.resizable()
@@ -45,28 +46,42 @@ struct GitHubUserDetailView: View {
                     }
 
                     HStack(spacing: 30) {
-                        Text("\(user.followers) followers")
-                        Text("\(user.following) following")
+                        NavigationLink(destination: GitHubUserListView(title: "Followers", fetchType: .followers, username: user.login)) {
+                            Text("\(user.followers) followers")
+                                .foregroundColor(.blue)
+                        }
+
+                        NavigationLink(destination: GitHubUserListView(title: "Following", fetchType: .following, username: user.login)) {
+                            Text("\(user.following) following")
+                                .foregroundColor(.blue)
+                        }
                     }
                     .font(.subheadline)
                 }
                 .padding()
-            } else if let error = viewModel.errorMessage {
-                Text("Error: \(error)")
-                    .foregroundColor(.red)
-                    .padding()
             } else {
-                Spacer()
-                ProgressView("Loading...")
-                Spacer()
+                VStack(spacing: 16) {
+                    Image(systemName: "person.fill.questionmark")
+                        .resizable()
+                        .frame(width: 80, height: 80)
+                        .foregroundColor(.gray)
+
+                    Text("User not found")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
             }
         }
         .onAppear {
-            viewModel.fetchUser(username: username)
+            viewModel.fetchUser(username: username) {
+                isLoading = false
+            }
         }
         .navigationTitle(username)
     }
 }
+
 
 struct GitHubUserDetailView_Previews: PreviewProvider {
     static var previews: some View {
@@ -79,12 +94,12 @@ struct GitHubUserDetailView_Previews: PreviewProvider {
             bio: "Just a test GitHub user 🐙",
             location: "The Internet",
             public_repos: 8,
-            followers: 3934,
+            followers: 39,
             following: 9
         )
 
         return NavigationStack {
-            GitHubUserDetailView(username: "octocat", viewModel: mockViewModel)
+            GitHubUserDetailView(username: "octocat")
         }
     }
 }

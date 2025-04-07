@@ -1,64 +1,25 @@
-//
-//  GitHubUserSearchView.swift
-//  GitHubUsers
-//
-//  Created by Raziel Hernandez on 2025-04-06.
-//
-
 import SwiftUI
 
 struct GitHubUserSearchView: View {
     @StateObject private var viewModel = GitHubViewModel()
     @State private var username: String = ""
     @State private var submittedUsername: String = ""
-    
+    @State private var shouldNavigate = false
+    @State private var isLoading = false
+
     var body: some View {
         NavigationStack {
             VStack {
                 Spacer()
 
-                if let user = viewModel.user, user.login.lowercased() == submittedUsername.lowercased() {
-                    VStack(spacing: 12) {
-                        AsyncImage(url: URL(string: user.avatar_url)) { image in
-                            image.resizable()
-                        } placeholder: {
-                            ProgressView()
-                        }
-                        .frame(width: 120, height: 120)
-                        .clipShape(Circle())
-                        .shadow(radius: 4)
-
-                        Text(user.login)
-                            .font(.title2)
-                            .bold()
-
-                        if let name = user.name {
-                            Text(name)
-                                .font(.headline)
-                        }
-
-                        if let bio = user.bio {
-                            Text(bio)
-                                .font(.subheadline)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                        }
-
-                        HStack(spacing: 30) {
-                            NavigationLink(destination: GitHubUserListView(title: "Followers", fetchType: .followers, username: user.login)) {
-                                Text("\(user.followers) followers")
-                                    .foregroundColor(.blue)
-                            }
-
-                            NavigationLink(destination: GitHubUserListView(title: "Following", fetchType: .following, username: user.login)) {
-                                Text("\(user.following) following")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .font(.subheadline)
-                    }
-                    .padding()
-                } else if submittedUsername != "", viewModel.errorMessage != nil {
+                // Show loading
+                if isLoading {
+                    ProgressView("Searching...")
+                        .padding()
+                }
+                
+                // Show error if user not found and not loading
+                else if submittedUsername != "", viewModel.errorMessage != nil {
                     VStack(spacing: 16) {
                         Image(systemName: "person.fill.questionmark")
                             .resizable()
@@ -70,22 +31,48 @@ struct GitHubUserSearchView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding()
-                } else {
-                    Spacer()
                 }
 
                 Spacer()
 
-                // Search Bar at bottom
+                // Hidden navigation link
+                NavigationLink(
+                    destination: Group {
+                        if let user = viewModel.user {
+                            GitHubUserDetailView(username: user.login)
+                        } else {
+                            EmptyView() // fallback to satisfy the return type
+                        }
+                    },
+                    isActive: $shouldNavigate
+                ) {
+                    EmptyView()
+                }
+                .hidden()
+
+
+                // Search Bar
                 HStack {
                     TextField("Search GitHub username", text: $username)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .padding(.horizontal)
 
                     Button(action: {
-                        submittedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !submittedUsername.isEmpty {
-                            viewModel.fetchUser(username: submittedUsername)
+                        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            submittedUsername = trimmed
+                            isLoading = true
+                            viewModel.user = nil
+                            viewModel.errorMessage = nil
+
+                            viewModel.fetchUser(username: trimmed) {
+                                DispatchQueue.main.async {
+                                    isLoading = false
+                                    if viewModel.user != nil {
+                                        shouldNavigate = true
+                                    }
+                                }
+                            }
                         }
                     }) {
                         Image(systemName: "magnifyingglass")

@@ -30,7 +30,10 @@ struct GitHubUserListView: View {
                 Text("Error: \(error)").foregroundColor(.red)
             } else {
                 ForEach(users) { user in
-                    NavigationLink(destination: GitHubUserDetailView(username: user.login)) {
+                    NavigationLink(
+                        destination: GitHubUserDetailView(username: user.login)
+                            .id(user.login)
+                    ) {
                         HStack {
                             AsyncImage(url: URL(string: user.avatar_url)) { image in
                                 image.resizable()
