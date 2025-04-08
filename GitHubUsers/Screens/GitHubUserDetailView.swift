@@ -1,16 +1,14 @@
-//
-//  GitHubUserDetailView.swift
-//  GitHubUsers
-//
-//  Created by Raziel Hernandez on 2025-04-06.
-//
-
 import SwiftUI
 
 struct GitHubUserDetailView: View {
+    // MARK: - Variables
     let username: String
-    @StateObject private var viewModel = GitHubViewModel()
+    //@Binding var path: NavigationPath
+    
+    //@StateObject private var viewModel = GitHubViewModel()
     @State private var isLoading = true
+    
+    @EnvironmentObject var viewModel: GitHubViewModel
 
     var body: some View {
         VStack {
@@ -18,48 +16,123 @@ struct GitHubUserDetailView: View {
                 Spacer()
                 ProgressView("Loading user...")
                     .progressViewStyle(CircularProgressViewStyle())
+                    .frame(maxWidth: .infinity)
                 Spacer()
             } else if let user = viewModel.user {
                 VStack(spacing: 12) {
-                    AsyncImage(url: URL(string: user.avatar_url)) { image in
-                        image.resizable()
-                    } placeholder: {
-                        ProgressView()
+                    
+                    // MARK: - HEADER
+                    HStack {
+                        AsyncImage(url: URL(string: user.avatar_url)) { image in
+                            image.resizable()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        .shadow(radius: 4)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(user.login)
+                                .font(.title2)
+                                .bold()
+                                .lineLimit(1)
+
+                            if let name = user.name {
+                                Text(name)
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.leading, 12)
+                        
+                        Spacer()
                     }
-                    .frame(width: 100, height: 100)
-                    .clipShape(Circle())
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.gray.opacity(0.2)))
+                    .shadow(radius: 5)
+                    .frame(maxWidth: .infinity)
 
-                    Text(user.login)
-                        .font(.title2)
-                        .bold()
-
-                    if let name = user.name {
-                        Text(name)
-                            .font(.headline)
-                    }
-
+                    // MARK: - USER INFO
                     if let bio = user.bio {
                         Text(bio)
                             .font(.subheadline)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    if let location = user.location {
+                        HStack {
+                            Image(systemName: "mappin.and.ellipse")
+                                .foregroundColor(.gray)
+                            Text(location)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
                     }
 
-                    HStack(spacing: 30) {
+                    HStack {
+                        Image(systemName: "folder.fill")
+                            .foregroundColor(.orange)
+                        Text("Public Repos: \(user.public_repos)")
+                            .font(.subheadline)
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    
+                    Spacer()
+
+                    // MARK: - FOOTER - Followers and following
+                    Text ("Follower & Following")
+                    Text ("Tap on the number to see the list")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    HStack {
                         NavigationLink(destination: GitHubUserListView(title: "Followers", fetchType: .followers, username: user.login)) {
-                            Text("\(user.followers) followers")
-                                .foregroundColor(.blue)
+                                
+                            HStack {
+                                Image(systemName: "person.3.fill")
+                                    .foregroundColor(.blue)
+                                
+                                Text("Following: \(user.followers)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                Spacer()
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
                         }
 
                         NavigationLink(destination: GitHubUserListView(title: "Following", fetchType: .following, username: user.login)) {
-                            Text("\(user.following) following")
-                                .foregroundColor(.blue)
+                            HStack {
+                                Image(systemName: "person.2.fill")
+                                    .foregroundColor(.blue)
+                                
+                                Text("Following: \(user.following)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                
+                                Spacer()
+                                
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
                         }
+                        
                     }
-                    .font(.subheadline)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.gray.opacity(0.1)))
+                    .shadow(radius: 5)
+                    .frame(maxWidth: .infinity)
                 }
                 .padding()
+
             } else {
+                // MARK: - User not found view
                 VStack(spacing: 16) {
                     Image(systemName: "person.fill.questionmark")
                         .resizable()
@@ -73,34 +146,46 @@ struct GitHubUserDetailView: View {
                 .padding()
             }
         }
+        .background(Color.secondary.opacity(0.2))
         .onAppear {
             viewModel.fetchUser(username: username) {
                 isLoading = false
             }
         }
-        .navigationTitle(username)
+        /*.navigationTitle("GitHub User Details")
+        .toolbar {
+            ToolbarItem(placement: .bottomBar) {
+                Button(action: {
+                    // Navigate back to the root of the navigation stack
+                    path.removeLast(path.count)
+                }) {
+                    Text("Back to Top")
+                        .foregroundColor(.blue)
+                }
+            }
+        }*/
     }
 }
 
+// MARK: - PREVIEW
+/*struct GitHubUserDetailView_Previews: PreviewProvider {
+    struct PreviewWrapper: View {
+        @State private var path = NavigationPath()
 
-struct GitHubUserDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        let mockViewModel = GitHubViewModel()
-        mockViewModel.user = GitHubUser(
-            login: "octocat",
-            avatar_url: "https://avatars.githubusercontent.com/u/583231?v=4",
-            html_url: "https://github.com/octocat",
-            name: "The Octocat",
-            bio: "Just a test GitHub user 🐙",
-            location: "The Internet",
-            public_repos: 8,
-            followers: 39,
-            following: 9
-        )
-
-        return NavigationStack {
-            GitHubUserDetailView(username: "octocat")
+        var body: some View {
+            NavigationStack(path: $path) {
+                GitHubUserDetailView(username: "octocat", path: $path)
+            }
         }
     }
-}
 
+    static var previews: some View {
+        PreviewWrapper()
+    }
+}*/
+
+
+#Preview {
+    GitHubUserDetailView(username: "carlos")
+        .environmentObject(GitHubViewModel())
+}

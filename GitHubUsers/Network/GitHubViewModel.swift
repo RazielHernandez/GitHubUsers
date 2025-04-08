@@ -9,7 +9,6 @@ import Foundation
 import Combine
 
 // MARK: - ViewModel
-
 class GitHubViewModel: ObservableObject {
     @Published var user: GitHubUser? = nil
     @Published var followers: [GitHubSimpleUser] = []
@@ -66,40 +65,71 @@ class GitHubViewModel: ObservableObject {
             }
         }.resume()
     }
+    func fetchFollowers(username: String, completion: @escaping ([GitHubSimpleUser]) -> Void) {
+            guard let url = URL(string: "https://api.github.com/users/\(username)/followers") else {
+                errorMessage = "Invalid followers URL"
+                completion([])
+                return
+            }
 
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self.errorMessage = error.localizedDescription
+                        completion([])
+                        return
+                    }
 
+                    guard let data = data else {
+                        self.errorMessage = "No data"
+                        completion([])
+                        return
+                    }
 
-    func fetchFollowers(username: String) {
-        guard let url = URL(string: "https://api.github.com/users/\(username)/followers") else {
-            errorMessage = "Invalid followers URL"
-            return
+                    do {
+                        let decoded = try JSONDecoder().decode([GitHubSimpleUser].self, from: data)
+                        self.followers = decoded
+                        completion(decoded)
+                    } catch {
+                        self.errorMessage = "Decoding error: \(error.localizedDescription)"
+                        completion([])
+                    }
+                }
+            }.resume()
         }
 
-        URLSession.shared.dataTaskPublisher(for: url)
-            .map(\.data)
-            .decode(type: [GitHubSimpleUser].self, decoder: JSONDecoder())
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: handleError, receiveValue: { [weak self] followers in
-                self?.followers = followers
-            })
-            .store(in: &cancellables)
-    }
+        func fetchFollowing(username: String, completion: @escaping ([GitHubSimpleUser]) -> Void) {
+            guard let url = URL(string: "https://api.github.com/users/\(username)/following") else {
+                errorMessage = "Invalid following URL"
+                completion([])
+                return
+            }
 
-    func fetchFollowing(username: String) {
-        guard let url = URL(string: "https://api.github.com/users/\(username)/following") else {
-            errorMessage = "Invalid following URL"
-            return
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self.errorMessage = error.localizedDescription
+                        completion([])
+                        return
+                    }
+
+                    guard let data = data else {
+                        self.errorMessage = "No data"
+                        completion([])
+                        return
+                    }
+
+                    do {
+                        let decoded = try JSONDecoder().decode([GitHubSimpleUser].self, from: data)
+                        self.following = decoded
+                        completion(decoded)
+                    } catch {
+                        self.errorMessage = "Decoding error: \(error.localizedDescription)"
+                        completion([])
+                    }
+                }
+            }.resume()
         }
-
-        URLSession.shared.dataTaskPublisher(for: url)
-            .map(\.data)
-            .decode(type: [GitHubSimpleUser].self, decoder: JSONDecoder())
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: handleError, receiveValue: { [weak self] following in
-                self?.following = following
-            })
-            .store(in: &cancellables)
-    }
 
     private func handleError(_ completion: Subscribers.Completion<Error>) {
         if case let .failure(error) = completion {

@@ -17,6 +17,9 @@ struct GitHubUserListView: View {
     let fetchType: GitHubUserListType
     let username: String
     var previewUsers: [GitHubSimpleUser]? = nil
+    
+    //@EnvironmentObject var viewModel: GitHubViewModel
+    //@Binding var path: NavigationPath
 
     @State private var users: [GitHubSimpleUser] = []
     @State private var isLoading = true
@@ -29,7 +32,7 @@ struct GitHubUserListView: View {
             } else if let error = error {
                 Text("Error: \(error)").foregroundColor(.red)
             } else {
-                ForEach(users) { user in
+                ForEach(self.users) { user in
                     NavigationLink(
                         destination: GitHubUserDetailView(username: user.login)
                             .id(user.login)
@@ -91,27 +94,50 @@ struct GitHubUserListView: View {
                 }
             }
         }.resume()
+        
+        /*switch fetchType {
+        case .followers:
+            viewModel.fetchFollowers(username: "octocat") { fetched in
+                    self.users = fetched
+                self.isLoading = false
+                }
+        case .following:
+            viewModel.fetchFollowing(username: "octocat") { fetched in
+                    self.users = fetched
+                self.isLoading = false
+                }
+        }*/
     }
 }
 
 struct GitHubUserListView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            GitHubUserListView(
-                title: "Followers",
-                fetchType: .followers,
-                username: "octocat",
-                previewUsers: [
-                    GitHubSimpleUser(
-                        login: "mojombo",
-                        avatar_url: "https://avatars.githubusercontent.com/u/1?v=4"
-                    ),
-                    GitHubSimpleUser(
-                        login: "defunkt",
-                        avatar_url: "https://avatars.githubusercontent.com/u/2?v=4"
-                    )
-                ]
-            )
+    
+    struct PreviewWrapper: View {
+        //@State private var path = NavigationPath()
+        
+        var body: some View {
+            NavigationStack() {
+                GitHubUserListView(
+                    title: "Followers",
+                    fetchType: .followers,
+                    username: "octocat",
+                    previewUsers: [
+                        GitHubSimpleUser(
+                            login: "mojombo",
+                            avatar_url: "https://avatars.githubusercontent.com/u/1?v=4"
+                        ),
+                        GitHubSimpleUser(
+                            login: "defunkt",
+                            avatar_url: "https://avatars.githubusercontent.com/u/2?v=4"
+                        )
+                    ]
+                )
+                .environmentObject(GitHubViewModel())
+            }
         }
+    }
+    
+    static var previews: some View {
+        PreviewWrapper()
     }
 }

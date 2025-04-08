@@ -9,9 +9,15 @@ import SwiftUI
 
 @main
 struct GitHubUsersApp: App {
+    @StateObject var viewModel = GitHubViewModel()
+    
     var body: some Scene {
+        
         WindowGroup {
             GitHubUserSearchView()
+                
         }
+        .environmentObject(viewModel)
+        
     }
 }
